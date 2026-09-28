@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full bg-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>효공부 - 스마트 학습 우선순위 플래너</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                        },
+                        navy: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans KR', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; color: #0f172a; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col antialiased">
+
+    <!-- 상단 헤더 -->
+    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-md">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-xl shadow-lg shadow-emerald-500/20">
+                    효
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg text-white leading-none tracking-tight">효공부 <span class="text-emerald-400 font-medium text-xs px-2 py-0.5 bg-emerald-950/80 border border-emerald-800 rounded-md ml-1">스마트 플래너</span></h1>
+                    <p class="text-[11px] text-slate-400 mt-1">여러 평가 일정이 겹칠 때 최적의 시간을 분배해줍니다</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btnSampleData" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i>
+                    <span class="hidden sm:inline">샘플 데이터</span>
+                </button>
+                <button id="btnResetData" class="text-xs bg-slate-800 hover:bg-red-950/80 text-slate-300 hover:text-red-300 border border-slate-700 hover:border-red-900 font-medium px-3 py-2 rounded-lg transition">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨테이너 -->
+    <main class="max-w-5xl mx-auto px-4 py-6 flex-1 w-full">
+
+        <!-- ========================================== -->
+        <!-- [VIEW 1] 입력 및 위저드 화면 (STEP 1 ~ STEP 3) -->
+        <!-- ========================================== -->
+        <div id="viewWizard" class="space-y-6">
+
+            <!-- 단계 네비게이션 프로그레스 -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-2 px-1">
+                    <span id="stepIndicatorText" class="text-emerald-600 font-extrabold">STEP 1. 과목 및 D-Day (남은시간) 입력</span>
+                    <span id="stepIndicatorPage">1 / 3 단계</span>
+                </div>
+                <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex p-0.5 border border-slate-200">
+                    <div id="stepProgressBar" class="h-full bg-emerald-500 rounded-full transition-all duration-300 w-1/3"></div>
+                </div>
+            </div>
+
+            <!-- 입력 카드 컨테이너 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- 좌측: STEP 입력 폼 (7 cols) -->
+                <div class="lg:col-span-7 bg-white rounded-2xl border-2 border-slate-200 p-6 shadow-sm">
+                    
+                    <!-- STEP 1: 평가 명칭 및 마감일(D-Day) -->
+                    <div id="step1Content" class="space-y-5">
+                        <div class="border-b border-slate-100 pb-3">
+                            <span class="inline-block px-2.5 py-1 bg-emerald-100 text-emerald-800 font-black text-xs rounded-md mb-1">STEP 1</span>
+                            <h2 class="text-lg font-bold text-slate-900">평가 정보 및 마감일(D-Day) 입력</h2>
+                            <p class="text-xs text-slate-500">지필/수행평가 여부와 마감 날짜를 입력하면 남은 시간이 자동 계산됩니다.</p>
+                        </div>
+
+                        <!-- 평가 유형 -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-slate-700 mb-2">평가 유형</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="inputEvalType" value="performance" checked class="peer sr-only">
+                                    <div class="p-3 text-center text-xs font-bold rounded-xl border-2 border-slate-200 text-slate-700 peer-checked:bg-emerald-50 peer-checked:border-emerald-600 peer-checked:text-emerald-900 transition flex items-center justify-center gap-2">
+                                        <i class="fa-solid fa-file-pen text-emerald-600"></i> 수행평가
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="inputEvalType" value="exam" class="peer sr-only">
+                                    <div class="p-3 text-center text-xs font-bold rounded-xl border-2 border-slate-200 text-slate-700 peer-checked:bg-indigo-50 peer-checked:border-indigo-600 peer-checked:text-indigo-900 transition flex items-center justify-center gap-2">
+                                        <i class="fa-solid fa-book-open text-indigo-600"></i> 지필평가 (시험)
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 과목명 & 평가제목 -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-extrabold text-slate-700 mb-1" for="inputSubject">과목명</label>
+                                <input type="text" id="inputSubject" placeholder="예: 수학, 영어" class="w-full px-3 py-2.5 text-sm font-semibold border-2 border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-slate-900 placeholder:text-slate-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-extrabold text-slate-700 mb-1" for="inputTitle">평가 / 단원명</label>
+                                <input type="text" id="inputTitle" placeholder="예: 삼각함수, 발표" class="w-full px-3 py-2.5 text-sm font-semibold border-2 border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-slate-900 placeholder:text-slate-400">
+                            </div>
+                        </div>
+
+                        <!-- 마감일 및 시간 -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-slate-700 mb-1" for="inputDueDate">마감일 (D-Day)</label>
+                            <input type="date" id="inputDueDate" class="w-full px-3 py-2.5 text-sm font-bold border-2 border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-slate-900">
+                        </div>
+
+                        <div class="pt-3">
+                            <button onclick="goToStep(2)" class="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md">
+                                <span>다음: 반영비율 입력 (STEP 2)</span>
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: 과목별 성적 반영 비율 -->
+                    <div id="step2Content" class="space-y-5 hidden">
+                        <div class="border-b border-slate-100 pb-3">
+                            <span class="inline-block px-2.5 py-1 bg-emerald-100 text-emerald-800 font-black text-xs rounded-md mb-1">STEP 2</span>
+                            <h2 class="text-lg font-bold text-slate-900">과목별 성적 반영 비율 입력</h2>
+                            <p class="text-xs text-slate-500">전체 학기 성적 중 이 평가가 차지하는 비중(%)을 입력하세요.</p>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-xs font-extrabold text-slate-700" for="inputWeight">성적 반영 비율</label>
+                                <span id="displayWeightVal" class="text-base font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">20 %</span>
+                            </div>
+                            <input type="range" id="inputWeight" min="5" max="60" step="5" value="20" class="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+                            <div class="flex justify-between text-[11px] text-slate-400 font-bold mt-2">
+                                <span>5% (적음)</span>
+                                <span>30% (보통)</span>
+                                <span>60% (매우 큼)</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-extrabold text-slate-700 mb-1" for="inputEstimatedHours">완성까지 예상 필요시간 (h)</label>
+                            <input type="number" id="inputEstimatedHours" min="0.5" max="100" step="0.5" value="3" class="w-full px-3 py-2.5 text-sm font-bold border-2 border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-slate-900">
+                            <p class="text-[11px] text-slate-400 mt-1">이 과제를 끝내거나 시험공부를 마치는데 총 몇 시간이 필요할까요?</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 pt-3">
+                            <button onclick="goToStep(1)" class="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">
+                                <i class="fa-solid fa-arrow-left mr-1"></i> 이전
+                            </button>
+                            <button onclick="goToStep(3)" class="py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-1">
+                                <span>다음: 난이도 설정 (STEP 3)</span>
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: 난이도 (1 ~ 100) 입력 -->
+                    <div id="step3Content" class="space-y-5 hidden">
+                        <div class="border-b border-slate-100 pb-3">
+                            <span class="inline-block px-2.5 py-1 bg-emerald-100 text-emerald-800 font-black text-xs rounded-md mb-1">STEP 3</span>
+                            <h2 class="text-lg font-bold text-slate-900">난이도 (1 ~ 100) 입력</h2>
+                            <p class="text-xs text-slate-500">본인이 느끼는 상대적 체감 난이도를 1부터 100까지 설정하세요.</p>
+                        </div>
+
+                        <!-- 난이도 슬라이더 1 ~ 100 -->
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <div class="flex justify-between items-center mb-3">
+                                <label class="text-xs font-extrabold text-slate-700" for="inputDifficulty">체감 난이도 (1 ~ 100)</label>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="inputDifficultyNum" min="1" max="100" value="50" class="w-16 px-2 py-1 text-center font-black text-lg text-emerald-700 bg-white border-2 border-emerald-500 rounded-lg focus:outline-none">
+                                    <span class="text-xs font-bold text-slate-500">점</span>
+                                </div>
+                            </div>
+                            <input type="range" id="inputDifficulty" min="1" max="100" value="50" class="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+                            <div class="flex justify-between text-[11px] font-bold text-slate-400 mt-2">
+                                <span>1 (매우 쉬움)</span>
+                                <span>50 (보통)</span>
+                                <span>100 (극상 난이도)</span>
+                            </div>
+                        </div>
+
+                        <!-- 추가 준비도/자신감 선택 -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-slate-700 mb-1" for="inputConfidence">현재 나의 암기/준비 상태</label>
+                            <select id="inputConfidence" class="w-full px-3 py-2.5 text-sm font-bold border-2 border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-slate-900 bg-white">
+                                <option value="1">1단계 - 거의 시작 안 됨 (위험)</option>
+                                <option value="2">2단계 - 기초 개념 잡는 중</option>
+                                <option value="3" selected>3단계 - 절반 정도 완료</option>
+                                <option value="4">4단계 - 문제풀이/실전 연습 중</option>
+                                <option value="5">5단계 - 완벽 대비 완료</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 pt-3">
+                            <button onclick="goToStep(2)" class="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">
+                                <i class="fa-solid fa-arrow-left mr-1"></i> 이전
+                            </button>
+                            <button onclick="saveAndAddTask()" class="py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
+                                <i class="fa-solid fa-check"></i>
+                                <span>목록에 추가하기</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 우측: 등록된 평가 목록 카드 (5 cols) -->
+                <div class="lg:col-span-5 space-y-4">
+                    <div class="bg-white rounded-2xl border-2 border-slate-200 p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                            <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-emerald-600"></i>
+                                등록된 평가 목록
+                            </h3>
+                            <span id="registeredCountBadge" class="text-xs font-black px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full border border-slate-200">0개</span>
+                        </div>
+
+                        <div id="wizardTaskList" class="space-y-2.5 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
+                            <!-- JS로 항목 추가됨 -->
+                        </div>
+
+                        <!-- STEP 4 결과 이동 버튼 -->
+                        <div class="pt-4 mt-2 border-t border-slate-100">
+                            <button onclick="goToResultView()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black rounded-xl text-base transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25">
+                                <i class="fa-solid fa-chart-pie text-lg"></i>
+                                <span>STEP 4. 시간 분배 분석 결과 보기</span>
+                                <i class="fa-solid fa-chevron-right text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- [VIEW 2] 결과 분석 페이지 (STEP 4) -->
+        <!-- ========================================== -->
+        <div id="viewResult" class="space-y-6 hidden">
+
+            <!-- 상단 액션 바 -->
+            <div class="bg-slate-900 text-white p-5 rounded-2xl shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-800">
+                <div>
+                    <span class="inline-block px-2.5 py-0.5 bg-emerald-500 text-slate-950 font-black text-xs rounded-md mb-1">STEP 4 분석 결과</span>
+                    <h2 class="text-xl font-black text-white">오늘의 과목별 맞춤 시간 분배</h2>
+                    <p class="text-xs text-slate-300 mt-1">D-Day 시급성, 성적 반영비율, 난이도(1~100)를 통합 산출한 결과입니다.</p>
+                </div>
+                <button onclick="goToWizardView()" class="self-start md:self-auto px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition border border-slate-700 flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-emerald-400"></i>
+                    <span>평가 항목 수정하기</span>
+                </button>
+            </div>
+
+            <!-- 1. 오늘 공부 시간 조절 컨트롤러 (고대비 수치) -->
+            <div class="bg-white rounded-2xl border-2 border-slate-200 p-6 shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-100">
+                    <div>
+                        <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-clock text-emerald-600"></i>
+                            오늘 내가 공부할 총 시간 설정
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">슬라이더나 클릭 버튼으로 오늘 가용 시간을 변경해보세요.</p>
+                    </div>
+                    
+                    <!-- 고대비 시간 표시 피치 -->
+                    <div class="flex items-center gap-3 bg-slate-900 text-white px-5 py-2.5 rounded-2xl shadow-md border border-slate-800">
+                        <span class="text-xs font-bold text-slate-400">오늘 목표:</span>
+                        <span id="displayResultDailyHours" class="text-2xl font-black text-emerald-400">4.0 시간</span>
+                    </div>
+                </div>
+
+                <!-- 시간 조절 슬라이더 및 빠른 조절 버튼 -->
+                <div class="space-y-4">
+                    <input type="range" id="resultDailyHoursInput" min="1" max="14" value="4" step="0.5" class="w-full h-3.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+                    
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span class="font-bold text-slate-400">빠른 설정:</span>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <button onclick="setStudyHours(2)" class="px-3 py-1.5 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-900 text-slate-700 font-bold rounded-lg transition border border-slate-200">2시간</button>
+                            <button onclick="setStudyHours(4)" class="px-3 py-1.5 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-900 text-slate-700 font-bold rounded-lg transition border border-slate-200">4시간</button>
+                            <button onclick="setStudyHours(6)" class="px-3 py-1.5 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-900 text-slate-700 font-bold rounded-lg transition border border-slate-200">6시간</button>
+                            <button onclick="setStudyHours(8)" class="px-3 py-1.5 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-900 text-slate-700 font-bold rounded-lg transition border border-slate-200">8시간</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 시간 배분 시각화 바 & 과목별 배분 카드 -->
+            <div class="bg-white rounded-2xl border-2 border-slate-200 p-6 shadow-sm space-y-5">
+                <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-chart-bar text-emerald-600"></i>
+                    오늘 추천 학습 시간 비중
+                </h3>
+
+                <!-- 시각적 프로그레스 바 -->
+                <div id="resultAllocationBar" class="w-full h-6 bg-slate-100 rounded-xl overflow-hidden flex shadow-inner border border-slate-200">
+                    <div class="text-center text-xs text-slate-400 font-bold w-full flex items-center justify-center">분석할 평가가 없습니다</div>
+                </div>
+
+                <!-- 과목별 정밀 시간 카드 목록 (고대비) -->
+                <div id="resultAllocationGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                    <!-- JS로 배분 결과 카드 자동 생성 -->
+                </div>
+            </div>
+
+            <!-- 3. 우선순위 매트릭스 분류 -->
+            <div class="space-y-4">
+                <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-emerald-600"></i>
+                    알고리즘 우선순위 매트릭스
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- 긴급 & 중요 -->
+                    <div class="bg-white rounded-2xl p-4 border-l-4 border-l-red-500 border-2 border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                            <h4 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                                🔥 긴급 & 최고 우선순위
+                            </h4>
+                            <span id="cat1Badge" class="text-xs font-black px-2 py-0.5 bg-red-100 text-red-700 rounded-md">0</span>
+                        </div>
+                        <div id="cat1List" class="space-y-2 min-h-[60px]"></div>
+                    </div>
+
+                    <!-- 단기 집중 -->
+                    <div class="bg-white rounded-2xl p-4 border-l-4 border-l-amber-500 border-2 border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                            <h4 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                                ⚡ 단기 완수 (수행평가 위주)
+                            </h4>
+                            <span id="cat2Badge" class="text-xs font-black px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md">0</span>
+                        </div>
+                        <div id="cat2List" class="space-y-2 min-h-[60px]"></div>
+                    </div>
+
+                    <!-- 지필고사 누적 -->
+                    <div class="bg-white rounded-2xl p-4 border-l-4 border-l-indigo-500 border-2 border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                            <h4 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                                📚 지필고사 누적 대비
+                            </h4>
+                            <span id="cat3Badge" class="text-xs font-black px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded-md">0</span>
+                        </div>
+                        <div id="cat3List" class="space-y-2 min-h-[60px]"></div>
+                    </div>
+
+                    <!-- 여유/차후 -->
+                    <div class="bg-white rounded-2xl p-4 border-l-4 border-l-emerald-500 border-2 border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                            <h4 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                ⏳ 여유 및 차후 관리
+                            </h4>
+                            <span id="cat4Badge" class="text-xs font-black px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md">0</span>
+                        </div>
+                        <div id="cat4List" class="space-y-2 min-h-[60px]"></div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 4. 통계 차트 -->
+            <div class="bg-white rounded-2xl border-2 border-slate-200 p-6 shadow-sm">
+                <h3 class="font-extrabold text-slate-900 text-sm mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-column text-emerald-600"></i>
+                    과목별 누적 총 필요시간 vs 반영비율
+                </h3>
+                <div class="h-56 relative w-full">
+                    <canvas id="subjectChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- 모달 안내창 -->
+    <div id="customModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl border-2 border-slate-200 transform scale-95 transition-transform duration-200" id="modalCard">
+            <div class="text-center">
+                <div id="modalIcon" class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-3 text-2xl font-bold">
+                    <i class="fa-solid fa-circle-info"></i>
+                </div>
+                <h3 id="modalTitle" class="text-base font-extrabold text-slate-900 mb-1">알림</h3>
+                <p id="modalMessage" class="text-xs text-slate-600 font-medium mb-5 leading-relaxed">내용입니다.</p>
+                <button id="modalCloseBtn" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 애플리케이션 중앙 데이터 상태
+        let state = {
+            currentStep: 1,
+            dailyHours: 4.0,
+            tasks: []
+        };
+
+        // 색상 팔레트 (시인성 중심)
+        const COLOR_PALETTE = [
+            '#059669', '#2563eb', '#d97706', '#dc2626', 
+            '#7c3aed', '#0891b2', '#4d7c0f', '#db2777'
+        ];
+
+        let chartInstance = null;
+
+        window.onload = function() {
+            // 오늘 날짜 기본 세팅
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('inputDueDate').value = todayStr;
+
+            loadLocalStorage();
+            initEventListeners();
+            updateWizardUI();
+        };
+
+        function initEventListeners() {
+            // STEP 2 성적 반영 비율 슬라이더
+            document.getElementById('inputWeight').addEventListener('input', (e) => {
+                document.getElementById('displayWeightVal').textContent = `${e.target.value} %`;
+            });
+
+            // STEP 3 난이도 1~100 동기화
+            const diffSlider = document.getElementById('inputDifficulty');
+            const diffNum = document.getElementById('inputDifficultyNum');
+            
+            diffSlider.addEventListener('input', (e) => {
+                diffNum.value = e.target.value;
+            });
+            diffNum.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value) || 1;
+                if (val > 100) val = 100;
+                if (val < 1) val = 1;
+                diffSlider.value = val;
+            });
+
+            // STEP 4 오늘 학습 시간 슬라이더
+            document.getElementById('resultDailyHoursInput').addEventListener('input', (e) => {
+                setStudyHours(parseFloat(e.target.value));
+            });
+
+            // 샘플 데이터 및 초기화 버튼
+            document.getElementById('btnSampleData').addEventListener('click', loadSampleData);
+            document.getElementById('btnResetData').addEventListener('click', resetAllData);
+            document.getElementById('modalCloseBtn').addEventListener('click', hideModal);
+        }
+
+        // 스텝 이동 제어
+        function goToStep(step) {
+            state.currentStep = step;
+            
+            // 프로그레스 바 & 인디케이터
+            const progressBar = document.getElementById('stepProgressBar');
+            const stepText = document.getElementById('stepIndicatorText');
+            const stepPage = document.getElementById('stepIndicatorPage');
+
+            document.getElementById('step1Content').classList.add('hidden');
+            document.getElementById('step2Content').classList.add('hidden');
+            document.getElementById('step3Content').classList.add('hidden');
+
+            if (step === 1) {
+                document.getElementById('step1Content').classList.remove('hidden');
+                progressBar.style.width = '33%';
+                stepText.textContent = 'STEP 1. 과목 및 D-Day (남은시간) 입력';
+                stepPage.textContent = '1 / 3 단계';
+            } else if (step === 2) {
+                const sub = document.getElementById('inputSubject').value.trim();
+                const title = document.getElementById('inputTitle').value.trim();
+                if (!sub || !title) {
+                    showModal("입력 확인", "과목명과 평가 제목을 먼저 입력해주세요.");
+                    state.currentStep = 1;
+                    document.getElementById('step1Content').classList.remove('hidden');
+                    return;
+                }
+                document.getElementById('step2Content').classList.remove('hidden');
+                progressBar.style.width = '66%';
+                stepText.textContent = 'STEP 2. 과목별 성적 반영 비율 입력';
+                stepPage.textContent = '2 / 3 단계';
+            } else if (step === 3) {
+                document.getElementById('step3Content').classList.remove('hidden');
+                progressBar.style.width = '100%';
+                stepText.textContent = 'STEP 3. 난이도 (1 ~ 100) 입력';
+                stepPage.textContent = '3 / 3 단계';
+            }
+        }
+
+        /**
+         * 알고리즘 계산식:
+         * 1. Urgency (D-Day): D-Day가 작을수록 우선순위 상승
+         * 2. Weight (반영비율 %): 지필고사 가중치 부여
+         * 3. Difficulty (1~100) & Confidence: 난이도가 높고 자신감이 적을수록 집중시간 배정
+         */
+        function calculatePriorityScore(task) {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const due = new Date(task.dueDate);
+            due.setHours(0,0,0,0);
+
+            const diffTime = due - today;
+            const dDay = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            task.dDay = dDay;
+
+            // 시급성
+            let urgency = 0;
+            if (dDay <= 0) urgency = 100;
+            else if (dDay === 1) urgency = 85;
+            else if (dDay === 2) urgency = 70;
+            else if (dDay <= 5) urgency = 50;
+            else if (dDay <= 10) urgency = 30;
+            else urgency = Math.max(5, 25 - (dDay - 10));
+
+            // 중요도 (성적 반영비율)
+            const typeMul = task.evalType === 'exam' ? 1.25 : 1.0;
+            const importance = task.weightRatio * typeMul;
+
+            // 난이도(1~100) 및 준비도
+            const diffScore = task.difficulty; // 1~100
+            const vulnerability = (6 - task.confidence) * 15; // 15~75
+
+            // 종합 점수 (100점 만점 규격화)
+            const totalScore = (urgency * 0.40) + (importance * 0.30) + (diffScore * 0.15) + (vulnerability * 0.15);
+            task.priorityScore = Math.round(totalScore * 10) / 10;
+            return task.priorityScore;
+        }
+
+        function saveAndAddTask() {
+            const evalType = document.querySelector('input[name="inputEvalType"]:checked').value;
+            const subjectName = document.getElementById('inputSubject').value.trim();
+            const taskTitle = document.getElementById('inputTitle').value.trim();
+            const dueDate = document.getElementById('inputDueDate').value;
+            const weightRatio = parseInt(document.getElementById('inputWeight').value);
+            const estimatedHours = parseFloat(document.getElementById('inputEstimatedHours').value);
+            const difficulty = parseInt(document.getElementById('inputDifficultyNum').value);
+            const confidence = parseInt(document.getElementById('inputConfidence').value);
+
+            if (!subjectName || !taskTitle || !dueDate) {
+                showModal("입력 오류", "과목명, 평가 제목, 마감일을 모두 정확히 입력해 주세요.");
+                return;
+            }
+
+            const newTask = {
+                id: Date.now().toString(),
+                evalType,
+                subjectName,
+                taskTitle,
+                dueDate,
+                weightRatio,
+                estimatedHours,
+                difficulty,
+                confidence,
+                completed: false
+            };
+
+            calculatePriorityScore(newTask);
+            state.tasks.push(newTask);
+            saveLocalStorage();
+
+            // 폼 1단계로 리셋
+            document.getElementById('inputTitle').value = '';
+            goToStep(1);
+            updateWizardUI();
+
+            showModal("추가 완료", `'${subjectName} - ${taskTitle}' 평가가 등록되었습니다.`);
+        }
+
+        function deleteTask(id) {
+            state.tasks = state.tasks.filter(t => t.id !== id);
+            saveLocalStorage();
+            updateWizardUI();
+            if (!document.getElementById('viewResult').classList.contains('hidden')) {
+                renderResultView();
+            }
+        }
+
+        function updateWizardUI() {
+            const listContainer = document.getElementById('wizardTaskList');
+            listContainer.innerHTML = '';
+
+            document.getElementById('registeredCountBadge').textContent = `${state.tasks.length}개`;
+
+            if (state.tasks.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-8 text-xs text-slate-400 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                        등록된 평가 항목이 없습니다.<br>왼쪽 폼에서 STEP 1~3을 작성해 보세요!
+                    </div>
+                `;
+                return;
+            }
+
+            state.tasks.forEach(task => {
+                calculatePriorityScore(task);
+                const dDayText = task.dDay === 0 ? 'D-Day' : (task.dDay < 0 ? `D+${Math.abs(task.dDay)}` : `D-${task.dDay}`);
+                const badgeColor = task.evalType === 'performance' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800';
+
+                const html = `
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="px-1.5 py-0.5 rounded font-black text-[10px] ${badgeColor}">
+                                    ${task.evalType === 'performance' ? '수행' : '지필'}
+                                </span>
+                                <strong class="text-slate-900 font-bold">${escapeHtml(task.subjectName)}</strong>
+                                <span class="text-slate-600">${escapeHtml(task.taskTitle)}</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 font-medium flex items-center gap-2">
+                                <span>반영비율: <strong class="text-slate-700">${task.weightRatio}%</strong></span>
+                                <span>·</span>
+                                <span>난이도: <strong class="text-slate-700">${task.difficulty}점</strong></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="px-2 py-1 font-black rounded-lg ${task.dDay <= 2 ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-800'}">
+                                ${dDayText}
+                            </span>
+                            <button onclick="deleteTask('${task.id}')" class="text-slate-400 hover:text-red-600 transition p-1">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function goToResultView() {
+            if (state.tasks.length === 0) {
+                showModal("항목 없음", "시간 분배를 위한 평가 일정을 1개 이상 추가해주세요.");
+                return;
+            }
+            document.getElementById('viewWizard').classList.add('hidden');
+            document.getElementById('viewResult').classList.remove('hidden');
+            renderResultView();
+        }
+
+        function goToWizardView() {
+            document.getElementById('viewResult').classList.add('hidden');
+            document.getElementById('viewWizard').classList.remove('hidden');
+        }
+
+        function setStudyHours(hours) {
+            state.dailyHours = hours;
+            document.getElementById('resultDailyHoursInput').value = hours;
+            document.getElementById('displayResultDailyHours').textContent = `${hours.toFixed(1)} 시간`;
+            saveLocalStorage();
+            if (!document.getElementById('viewResult').classList.contains('hidden')) {
+                renderResultView();
+            }
+        }
+
+        function renderResultView() {
+            // 우선순위 산출 및 정렬
+            state.tasks.forEach(t => calculatePriorityScore(t));
+            state.tasks.sort((a, b) => b.priorityScore - a.priorityScore);
+
+            const totalPrioritySum = state.tasks.reduce((sum, t) => sum + t.priorityScore, 0);
+
+            // 1. 시각적 프로그레스 바 & 배분 카드
+            const barContainer = document.getElementById('resultAllocationBar');
+            const gridContainer = document.getElementById('resultAllocationGrid');
+            barContainer.innerHTML = '';
+            gridContainer.innerHTML = '';
+
+            state.tasks.forEach((task, idx) => {
+                const color = COLOR_PALETTE[idx % COLOR_PALETTE.length];
+                const ratio = totalPrioritySum > 0 ? (task.priorityScore / totalPrioritySum) : (1 / state.tasks.length);
+                const allocatedMinutes = Math.round((ratio * state.dailyHours) * 60);
+                const hours = Math.floor(allocatedMinutes / 60);
+                const mins = allocatedMinutes % 60;
+                
+                const timeString = hours > 0 ? `${hours}시간 ${mins}분` : `${mins}분`;
+
+                // Progress Bar Segment
+                const segment = document.createElement('div');
+                segment.className = 'h-full transition-all flex items-center justify-center text-xs font-black text-white px-1';
+                segment.style.width = `${(ratio * 100).toFixed(1)}%`;
+                segment.style.backgroundColor = color;
+                if ((ratio * 100) > 8) {
+                    segment.textContent = `${Math.round(ratio * 100)}%`;
+                }
+                barContainer.appendChild(segment);
+
+                // 고대비 배분 카드
+                const cardHTML = `
+                    <div class="p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl flex items-center justify-between">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${color}"></span>
+                                <span class="font-extrabold text-slate-900 text-sm">${escapeHtml(task.subjectName)}</span>
+                                <span class="text-xs text-slate-500 font-semibold">(${escapeHtml(task.taskTitle)})</span>
+                            </div>
+                            <div class="text-xs text-slate-600 font-medium">
+                                난이도 <strong class="text-slate-800">${task.difficulty}점</strong> · 반영 <strong class="text-slate-800">${task.weightRatio}%</strong>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-black text-emerald-700">${timeString}</div>
+                            <div class="text-[11px] font-bold text-slate-400">비중 ${Math.round(ratio * 100)}%</div>
+                        </div>
+                    </div>
+                `;
+                gridContainer.insertAdjacentHTML('beforeend', cardHTML);
+            });
+
+            // 2. 카테고리 매트릭스 채우기
+            renderMatrixCategories();
+
+            // 3. 차트 업데이트
+            renderChart();
+        }
+
+        function renderMatrixCategories() {
+            const cat1 = document.getElementById('cat1List');
+            const cat2 = document.getElementById('cat2List');
+            const cat3 = document.getElementById('cat3List');
+            const cat4 = document.getElementById('cat4List');
+
+            cat1.innerHTML = ''; cat2.innerHTML = ''; cat3.innerHTML = ''; cat4.innerHTML = '';
+            let c1 = 0, c2 = 0, c3 = 0, c4 = 0;
+
+            state.tasks.forEach(task => {
+                let category = 4;
+                if (task.dDay <= 2 || task.priorityScore >= 55) category = 1;
+                else if (task.evalType === 'performance' && task.dDay <= 6) category = 2;
+                else if (task.evalType === 'exam') category = 3;
+
+                const itemHTML = `
+                    <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs font-bold">
+                        <div class="flex items-center gap-1.5 truncate">
+                            <span class="text-slate-900 truncate">${escapeHtml(task.subjectName)}</span>
+                            <span class="text-slate-500 font-normal truncate">(${escapeHtml(task.taskTitle)})</span>
+                        </div>
+                        <span class="text-emerald-700 font-black flex-shrink-0 ml-2">${task.priorityScore}점</span>
+                    </div>
+                `;
+
+                if (category === 1) { cat1.insertAdjacentHTML('beforeend', itemHTML); c1++; }
+                else if (category === 2) { cat2.insertAdjacentHTML('beforeend', itemHTML); c2++; }
+                else if (category === 3) { cat3.insertAdjacentHTML('beforeend', itemHTML); c3++; }
+                else { cat4.insertAdjacentHTML('beforeend', itemHTML); c4++; }
+            });
+
+            document.getElementById('cat1Badge').textContent = c1;
+            document.getElementById('cat2Badge').textContent = c2;
+            document.getElementById('cat3Badge').textContent = c3;
+            document.getElementById('cat4Badge').textContent = c4;
+
+            if (c1 === 0) cat1.innerHTML = `<div class="text-xs text-slate-400 py-3 text-center">해당 항목 없음</div>`;
+            if (c2 === 0) cat2.innerHTML = `<div class="text-xs text-slate-400 py-3 text-center">해당 항목 없음</div>`;
+            if (c3 === 0) cat3.innerHTML = `<div class="text-xs text-slate-400 py-3 text-center">해당 항목 없음</div>`;
+            if (c4 === 0) cat4.innerHTML = `<div class="text-xs text-slate-400 py-3 text-center">해당 항목 없음</div>`;
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('subjectChart').getContext('2d');
+            const labels = state.tasks.map(t => t.subjectName);
+            const scores = state.tasks.map(t => t.priorityScore);
+            const weights = state.tasks.map(t => t.weightRatio);
+
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '알고리즘 우선순위 점수',
+                            data: scores,
+                            backgroundColor: '#059669',
+                            borderRadius: 6
+                        },
+                        {
+                            label: '성적 반영비율 (%)',
+                            data: weights,
+                            backgroundColor: '#94a3b8',
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { font: { family: 'Noto Sans KR', weight: 'bold' } } }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function loadSampleData() {
+            const today = new Date();
+            function getFutureDate(days) {
+                const d = new Date(today);
+                d.setDate(d.getDate() + days);
+                return d.toISOString().split('T')[0];
+            }
+
+            state.tasks = [
+                { id: '1', evalType: 'performance', subjectName: '수학', taskTitle: '삼각함수 탐구 보고서', dueDate: getFutureDate(1), weightRatio: 20, estimatedHours: 4, difficulty: 85, confidence: 2, completed: false },
+                { id: '2', evalType: 'performance', subjectName: '영어', taskTitle: '영어 발표 스크립트', dueDate: getFutureDate(3), weightRatio: 15, estimatedHours: 3, difficulty: 60, confidence: 4, completed: false },
+                { id: '3', evalType: 'exam', subjectName: '한국사', taskTitle: '중간고사 지필평가', dueDate: getFutureDate(10), weightRatio: 35, estimatedHours: 12, difficulty: 70, confidence: 2, completed: false },
+                { id: '4', evalType: 'exam', subjectName: '물리학', taskTitle: '중간고사 지필평가', dueDate: getFutureDate(8), weightRatio: 30, estimatedHours: 10, difficulty: 95, confidence: 1, completed: false }
+            ];
+
+            saveLocalStorage();
+            updateWizardUI();
+            showModal("샘플 데이터 완료", "수학, 영어, 한국사, 물리학 샘플 평가 항목이 등록되었습니다.");
+        }
+
+        function resetAllData() {
+            state.tasks = [];
+            saveLocalStorage();
+            updateWizardUI();
+            if (!document.getElementById('viewResult').classList.contains('hidden')) {
+                goToWizardView();
+            }
+            showModal("초기화 완료", "모든 평가 데이터가 삭제되었습니다.");
+        }
+
+        function saveLocalStorage() {
+            localStorage.setItem('hyogongbu_data', JSON.stringify(state));
+        }
+
+        function loadLocalStorage() {
+            const saved = localStorage.getItem('hyogongbu_data');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    state.dailyHours = parsed.dailyHours || 4.0;
+                    state.tasks = parsed.tasks || [];
+                    document.getElementById('resultDailyHoursInput').value = state.dailyHours;
+                    document.getElementById('displayResultDailyHours').textContent = `${state.dailyHours.toFixed(1)} 시간`;
+                } catch(e) {
+                    console.error("Local storage load fail", e);
+                }
+            }
+        }
+
+        function showModal(title, message) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            const modal = document.getElementById('customModal');
+            const card = document.getElementById('modalCard');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                card.classList.remove('scale-95');
+                card.classList.add('scale-100');
+            }, 10);
+        }
+
+        function hideModal() {
+            const modal = document.getElementById('customModal');
+            const card = document.getElementById('modalCard');
+            modal.classList.add('opacity-0');
+            card.classList.remove('scale-100');
+            card.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;')
+                      .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>
